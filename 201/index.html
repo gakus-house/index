@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>みんなの定期テスト対策！暗記カード共有</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --primary: #4a6fa5;
+            --accent: #ff6b6b;
+            --text: #333333;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text); padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        
+        .header { text-align: center; margin-bottom: 20px; width: 100%; max-width: 500px; }
+        .header h1 { font-size: 22px; color: var(--primary); margin-bottom: 5px; }
+        .header p { font-size: 13px; color: #666; }
+
+        /* タブ切り替え */
+        .tabs { display: flex; width: 100%; max-width: 500px; margin-bottom: 15px; background: #ddd; border-radius: 10px; overflow: hidden; }
+        .tab-btn { flex: 1; padding: 10px; border: none; background: none; font-weight: bold; cursor: pointer; color: #555; }
+        .tab-btn.active { background: var(--primary); color: white; }
+
+        .content-section { width: 100%; max-width: 500px; display: none; }
+        .content-section.active { display: block; }
+
+        /* 暗記カードの立体デザイン */
+        .card-container { perspective: 1000px; width: 100%; height: 220px; margin-bottom: 20px; cursor: pointer; }
+        .card { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.6s; box-shadow: 0 8px 20px rgba(0,0,0,0.1); border-radius: 15px; }
+        .card.flipped { transform: rotateY(180deg); }
+        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 15px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; border: 2px solid #e1e8ed; }
+        .card-front { background: var(--card-bg); color: var(--text); }
+        .card-back { background: #eef1f6; color: var(--primary); transform: rotateY(180deg); }
+        
+        .card-tag { position: absolute; top: 15px; left: 15px; font-size: 11px; background: #e2e8f0; padding: 3px 8px; border-radius: 20px; color: #4a5568; }
+        .card-hint { position: absolute; bottom: 15px; font-size: 12px; color: #aaa; }
+        .word-text { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+
+        /* 操作ボタン */
+        .controls { display: flex; justify-content: space-between; width: 100%; max-width: 500px; margin-bottom: 30px; }
+        .btn { background: white; border: 2px solid var(--primary); color: var(--primary); padding: 10px 20px; border-radius: 25px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn:hover { background: var(--primary); color: white; }
+        .btn-primary { background: var(--primary); color: white; }
+
+        /* カード作成フォーム */
+        .form-box { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 14px; font-weight: bold; margin-bottom: 5px; color: #4a5568; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; }
+        .submit-btn { width: 100%; background: var(--accent); color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(255,107,107,0.3); }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>📝 テスト対策！みんなの暗記カード</h1>
+    <p>学校のタブレットやスマホで、いつでもどこでも暗記クイズ！</p>
+</div>
+
+<!-- タブメニュー -->
+<div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('play')">カードで遊ぶ</button>
+    <button class="tab-btn" onclick="switchTab('create')">新しいカードを投稿する</button>
+</div>
+
+<!-- 遊ぶセクション -->
+<div id="play-section" class="content-section active">
+    <div class="card-container" onclick="flipCard()">
+        <div class="card" id="main-card">
+            <!-- 表（問題） -->
+            <div class="card-face card-front">
+                <span class="card-tag" id="card-subject">教科名</span>
+                <div class="word-text" id="card-question">問題がここに表示されます</div>
+                <span class="card-hint">タップして答えを見る</span>
+            </div>
+            <!-- 裏（答え） -->
+            <div class="card-face card-back">
+                <span class="card-tag">こたえ</span>
+                <div class="word-text" id="card-answer">答えがここに表示されます</div>
+                <span class="card-hint">タップして問題に戻る</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn" onclick="prevCard()">◀ 前へ</button>
+        <span id="card-index" style="align-self: center; font-weight: bold;">1 / 3</span>
+        <button class="btn btn-primary" onclick="nextCard()">次へ ▶</button>
+    </div>
+</div>
+
+<!-- 投稿セクション -->
+<div id="create-section" class="content-section">
+    <div class="form-box">
+        <h3 style="margin-bottom: 15px; font-size: 16px; color: var(--primary);">自分で作った問題を共有しよう！</h3>
+        <div class="form-group">
+            <label>教科・ジャンル</label>
+            <select id="new-subject">
+                <option value="歴史">歴史（社会）</option>
+                <option value="地理">地理（社会）</option>
+                <option value="理科">理科</option>
+                <option value="国語">国語・漢字</option>
+                <option value="英語">英語・単語</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>問題（おもて面）</label>
+            <input type="text" id="new-question" placeholder="例：1603年 江戸幕府を開いたのは？">
+        </div>
+        <div class="form-group">
+            <label>答え（うら面）</label>
+            <input type="text" id="new-answer" placeholder="例：徳川家康">
+        </div>
+        <button class="submit-btn" onclick="addCard()">公開（カードを追加）する</button>
+    </div>
+</div>
+
+<script>
+    // 最初に入っているサンプルの暗記カードデータ
+    let cards = [
+        { subject: "歴史", question: "794年に移された、京都の新しい都の名前は？", answer: "平安京" },
+        { subject: "理科", question: "植物が光を受けて酸素とデンプンを作る働きは？", answer: "光合成" },
+        { subject: "英語", question: "「〜に興味がある」を表する熟語は？ be interested ( )", answer: "in" }
+    ];
+
+    let currentIndex = 0;
+
+    const mainCard = document.getElementById("main-card");
+    const cardSubject = document.getElementById("card-subject");
+    const cardQuestion = document.getElementById("card-question");
+    const cardAnswer = document.getElementById("card-answer");
+    const cardIndex = document.getElementById("card-index");
+
+    // 画面にカードを表示する関数
+    function updateCardDisplay() {
+        if (cards.length === 0) {
+            cardSubject.textContent = "なし";
+            cardQuestion.textContent = "カードがありません。追加してください！";
+            cardAnswer.textContent = "なし";
+            cardIndex.textContent = "0 / 0";
+            return;
+        }
+        mainCard.classList.remove("flipped"); // めくった状態を戻す
+        setTimeout(() => {
+            const current = cards[currentIndex];
+            cardSubject.textContent = current.subject;
+            cardQuestion.textContent = current.question;
+            cardAnswer.textContent = current.answer;
+            cardIndex.textContent = `${currentIndex + 1} / ${cards.length}`;
+        }, 150); // アニメーションのために少し遅らせる
+    }
+
+    // カードを裏返す
+    function flipCard() {
+        mainCard.classList.toggle("flipped");
+    }
+
+    // 次のカードへ
+    function nextCard() {
+        if (cards.length === 0) return;
+        currentIndex = (currentIndex + 1) % cards.length;
+        updateCardDisplay();
+    }
+
+    // 前のカードへ
+    function prevCard() {
+        if (cards.length === 0) return;
+        currentIndex = (currentIndex - 1 + cards.length) % cards.length;
+        updateCardDisplay();
+    }
+
+    // タブ切り替え機能
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.content-section').forEach(sec => sec.classList.remove('active'));
+
+        if (tabName === 'play') {
+            document.querySelector('.tabs button:nth-child(1)').classList.add('active');
+            document.getElementById('play-section').classList.add('active');
+        } else {
+            document.querySelector('.tabs button:nth-child(2)').classList.add('active');
+            document.getElementById('create-section').classList.add('active');
+        }
+    }
+
+    // ユーザーが新しいカードを追加する機能
+    function addCard() {
+        const subject = document.getElementById("new-subject").value;
+        const question = document.getElementById("new-question").value;
+        const answer = document.getElementById("new-answer").value;
+
+        if (!question || !answer) {
+            alert("問題と答えを両方入力してね！");
+            return;
+        }
+
+        // 新しいデータを配列に追加
+        cards.push({ subject, question, answer });
+        
+        // フォームを空にする
+        document.getElementById("new-question").value = "";
+        document.getElementById("new-answer").value = "";
+
+        alert("カードを公開しました！「カードで遊ぶ」タブに追加されています。");
+        currentIndex = cards.length - 1; // 追加したカードに移動
+        updateCardDisplay();
+        switchTab('play'); // 遊ぶ画面に戻る
+    }
+
+    // 最初に1回目の表示
+    updateCardDisplay();
+</script>
+
+</body>
+</html>
